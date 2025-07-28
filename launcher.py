@@ -2,9 +2,6 @@ import tkinter as tk
 from tkinter import messagebox
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-import requests
-import zipfile
-import shutil
 import threading
 import os
 import platform
@@ -15,40 +12,35 @@ import webbrowser
 import time
 import darkdetect
 import json
+from update_manager import UpdateManager  # Import du gestionnaire de mises à jour
 
-# Configuration
-APP_VERSION = "1.0.0"
-UPDATE_SERVER_URL = "https://supportx.ch/updates"
-APP_NAME = "SupperX APP"
-SUPPORTX_URL = "https://supportx.ch/"
+# Charger la configuration depuis un fichier externe
 CONFIG_FILE = "config.json"
 
 class ThemeManager:
     """Gère les thèmes et les paramètres de l'application"""
-
-    DEFAULT_CONFIG = {
-        "theme": "system",
-        "auto_update": True,
-    }
 
     def __init__(self):
         self.config = self.load_config()
 
     def load_config(self):
         """Charge la configuration depuis le fichier ou utilise les valeurs par défaut"""
+        default_config = {
+            "theme": "system",
+            "auto_update": True,
+            "simulate_updates": True
+        }
+
         try:
             if os.path.exists(CONFIG_FILE):
                 with open(CONFIG_FILE, 'r') as f:
-                    config = json.load(f)
-                    # Mettre à jour la configuration avec les valeurs par défaut si certaines clés sont manquantes
-                    for key in self.DEFAULT_CONFIG:
-                        if key not in config:
-                            config[key] = self.DEFAULT_CONFIG[key]
-                    return config
+                    loaded_config = json.load(f)
+                    # Fusionner avec la configuration par défaut
+                    return {**default_config, **loaded_config}
         except Exception as e:
             print(f"Erreur lors du chargement de la configuration : {e}")
 
-        return self.DEFAULT_CONFIG
+        return default_config
 
     def save_config(self):
         """Sauvegarde la configuration dans le fichier"""
@@ -61,12 +53,12 @@ class ThemeManager:
 class SuperAppLauncher:
     def __init__(self, root):
         self.root = root
-        self.root.title(f"{APP_NAME} - Version {APP_VERSION}")
+        self.theme_manager = ThemeManager()
+        config = self.theme_manager.config
+
+        self.root.title(f"{config['app_name']} - Version {config['app_version']}")
         self.root.geometry("1100x750")
         self.root.minsize(900, 600)
-
-        # Initialiser le gestionnaire de thème
-        self.theme_manager = ThemeManager()
 
         # Initialiser le style
         self.style = ttk.Style()
@@ -80,17 +72,23 @@ class SuperAppLauncher:
             except Exception as e:
                 print(f"Erreur lors du chargement de l'icône : {e}")
 
+        # Variables d'interface
         self.update_status = None
         self.progress = None
         self.web_frame = None
         self.web_tab = None
-        self.current_version = APP_VERSION
+        self.current_version = config['app_version']
+        self.supportx_url = config['supportx_url']
 
         # Créer l'interface
         self.setup_main_ui()
 
-        # Vérifier les mises à jour
-        self.check_for_updates(manual=False)
+        # Initialiser le gestionnaire de mises à jour
+        self.update_manager = UpdateManager(self, config)
+
+        # Vérifier les mises à jour SEULEMENT si auto_update est activé
+        if config['auto_update']:
+            self.check_for_updates(manual=False)
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -135,7 +133,7 @@ class SuperAppLauncher:
         # Barre de statut
         self.status_bar = ttk.Label(
             self.root,
-            text=f"Version {APP_VERSION} | © 2025 SupportX",
+            text=f"Version {self.current_version} | © 2023 SupportX",
             bootstyle=SECONDARY,
             anchor="center",
             font=("Arial", 9)
@@ -180,7 +178,7 @@ class SuperAppLauncher:
         ttk.Label(version_frame, text="Version:", font=("Arial", 10)).pack(side="left")
         self.version_label = ttk.Label(
             version_frame,
-            text=APP_VERSION,
+            text=self.current_version,
             font=("Arial", 10, "bold"),
             bootstyle=INFO
         )
@@ -234,7 +232,7 @@ class SuperAppLauncher:
 
         actions = [
             ("Actualiser", "info", self.refresh_webview, 10),
-            ("Accueil", "secondary", lambda: self.load_webview(SUPPORTX_URL), 10),
+            ("Accueil", "secondary", lambda: self.load_webview(self.supportx_url), 10),
             ("Ouvrir navigateur", "primary", self.open_in_browser, 18)
         ]
 
@@ -252,7 +250,7 @@ class SuperAppLauncher:
                 btn.pack(side="left", padx=5)
 
         self.web_frame = HtmlFrame(self.web_tab, messages_enabled=False)
-        self.web_frame.load_website(SUPPORTX_URL)
+        self.web_frame.load_website(self.supportx_url)
         self.web_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
     def build_about_tab(self, tab):
@@ -269,7 +267,7 @@ class SuperAppLauncher:
 
         ttk.Label(
             about_frame,
-            text=f"Version {APP_VERSION}",
+            text=f"Version {self.current_version}",
             font=("Arial", 12),
             bootstyle=INFO
         ).pack(pady=5)
@@ -306,7 +304,7 @@ class SuperAppLauncher:
 
         ttk.Label(
             about_frame,
-            text="© 2025 SupportX - Tous droits réservés",
+            text="© 2023 SupportX - Tous droits réservés",
             font=("Arial", 9),
             bootstyle=SECONDARY
         ).pack(side="bottom", pady=10)
@@ -357,6 +355,24 @@ class SuperAppLauncher:
         )
         auto_update_check.pack(padx=10, pady=10, anchor="w")
 
+        # Nouveau cadre pour la simulation des mises à jour
+        simulation_frame = ttk.Labelframe(
+            settings_frame,
+            text="Mode Développeur",
+            bootstyle=INFO
+        )
+        simulation_frame.pack(fill="x", pady=10, padx=5)
+
+        self.simulate_var = tk.BooleanVar(value=self.theme_manager.config["simulate_updates"])
+        simulate_check = ttk.Checkbutton(
+            simulation_frame,
+            text="Activer la simulation des mises à jour",
+            variable=self.simulate_var,
+            bootstyle="round-toggle",
+            command=self.save_simulate_setting
+        )
+        simulate_check.pack(padx=10, pady=10, anchor="w")
+
         advanced_frame = ttk.Labelframe(
             settings_frame,
             text="Paramètres avancés",
@@ -383,6 +399,12 @@ class SuperAppLauncher:
         self.theme_manager.config["auto_update"] = self.auto_update_var.get()
         self.theme_manager.save_config()
 
+    def save_simulate_setting(self):
+        """Sauvegarde le paramètre de simulation des mises à jour"""
+        self.theme_manager.config["simulate_updates"] = self.simulate_var.get()
+        self.theme_manager.save_config()
+        self.status_bar.config(text="Paramètre de simulation sauvegardé")
+
     def change_theme(self, event):
         """Change le thème de l'application"""
         self.theme_manager.config["theme"] = self.theme_var.get()
@@ -406,7 +428,7 @@ class SuperAppLauncher:
 
     def open_in_browser(self):
         """Ouvre le site dans le navigateur par défaut"""
-        webbrowser.open(SUPPORTX_URL)
+        webbrowser.open(self.supportx_url)
 
     def open_app_folder(self):
         """Ouvre le dossier de l'application"""
@@ -422,79 +444,11 @@ class SuperAppLauncher:
             messagebox.showerror("Erreur", f"Impossible d'ouvrir le dossier: {str(e)}")
 
     def check_for_updates(self, manual=False):
-        """Vérifie les mises à jour disponibles"""
-        current_time = time.strftime("%H:%M:%S")
-        self.status_bar.config(text=f"Vérification des mises à jour... ({current_time})")
-        self.update_status.config(text="Vérification en cours...")
-        try:
-            threading.Thread(target=self.simulate_update_check, args=(manual,), daemon=True).start()
-        except Exception as e:
-            self.update_status.config(text="Échec de vérification")
-            self.status_bar.config(text="Échec de vérification des mises à jour")
-            if manual:
-                messagebox.showerror("Erreur", f"Impossible de vérifier les mises à jour: {str(e)}")
-
-    def simulate_update_check(self, manual):
-        """Simulation de vérification de mise à jour"""
-        time.sleep(2)
-        demo_mode = True
-        if demo_mode:
-            latest_version = "1.3.0"
-            update_available = self.is_newer_version(latest_version)
-            if update_available:
-                self.root.after(0, lambda: self.show_update_available(latest_version, manual))
-            else:
-                self.root.after(0, lambda: self.show_no_update(manual))
-
-    def show_update_available(self, latest_version, manual):
-        """Affiche qu'une mise à jour est disponible"""
-        self.update_status.config(text=f"Mise à jour {latest_version} disponible!")
-        self.status_bar.config(text=f"Version {latest_version} disponible - Prêt à installer")
-        if manual or messagebox.askyesno("Mise à jour disponible", f"Version {latest_version} disponible. Voulez-vous l'installer maintenant?"):
-            threading.Thread(target=self.download_and_apply_update, args=(f"{UPDATE_SERVER_URL}/update_{latest_version}.zip",), daemon=True).start()
-
-    def show_no_update(self, manual):
-        """Affiche qu'aucune mise à jour n'est disponible"""
-        current_time = time.strftime("%H:%M:%S")
-        self.update_status.config(text=f"Vous avez la dernière version ({self.current_version})")
-        self.status_bar.config(text=f"À jour - Dernière vérification: {current_time}")
-        if manual:
-            messagebox.showinfo("Mise à jour", "Vous utilisez la dernière version disponible.")
-
-    def is_newer_version(self, latest_version):
-        """Vérifie si la version est plus récente"""
-        current = [int(x) for x in self.current_version.split(".")]
-        latest = [int(x) for x in latest_version.split(".")]
-        return latest > current
-
-    def download_and_apply_update(self, update_url):
-        """Télécharge et applique la mise à jour"""
-        try:
-            self.update_status.config(text="Téléchargement en cours...")
-            self.status_bar.config(text="Téléchargement de la mise à jour...")
-            self.progress["value"] = 0
-            for i in range(0, 101, 2):
-                self.progress["value"] = i
-                self.update_status.config(text=f"Téléchargement... {i}%")
-                time.sleep(0.05)
-                self.root.update()
-
-            self.update_status.config(text="Application de la mise à jour...")
-            self.status_bar.config(text="Installation de la mise à jour...")
-            for i in range(0, 101, 5):
-                self.progress["value"] = i
-                time.sleep(0.1)
-                self.root.update()
-
-            self.current_version = "1.3.0"
-            self.version_label.config(text=self.current_version)
-            self.update_status.config(text="Mise à jour terminée!")
-            self.status_bar.config(text="Mise à jour installée avec succès - Redémarrage nécessaire")
-            messagebox.showinfo("Mise à jour", "Mise à jour installée avec succès. Veuillez redémarrer l'application pour appliquer les changements.")
-        except Exception as e:
-            self.update_status.config(text="Échec de la mise à jour")
-            self.status_bar.config(text="Échec de l'installation de la mise à jour")
-            messagebox.showerror("Erreur", f"Échec de la mise à jour : {str(e)}")
+        """Vérifie les mises à jour seulement si autorisé"""
+        # Toujours autoriser les vérifications manuelles
+        # Pour les automatiques, vérifier si auto_update est activé
+        if manual or self.theme_manager.config["auto_update"]:
+            self.update_manager.check_for_updates(manual)
 
     def on_closing(self):
         """Gestion de la fermeture de l'application"""
