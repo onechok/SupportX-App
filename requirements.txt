@@ -1,0 +1,5 @@
+tkinterweb
+ttkbootstrap
+requests
+Pillow
+darkdetect
