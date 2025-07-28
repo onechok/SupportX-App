@@ -70,7 +70,7 @@ class SuperAppLauncher:
         build_settings_tab(self, settings_tab)
         self.status_bar = ttk.Label(
             self.root,
-            text=f"Version {self.current_version} | © 2023 SupportX",
+            text=f"Version {self.current_version} | © 2025 SupportX",
             bootstyle=SECONDARY,
             anchor="center",
             font=("Arial", 9)
