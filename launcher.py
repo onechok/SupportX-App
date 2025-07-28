@@ -21,15 +21,14 @@ APP_VERSION = "1.0.0"
 UPDATE_SERVER_URL = "https://supportx.ch/updates"
 APP_NAME = "SupperX APP"
 SUPPORTX_URL = "https://supportx.ch/"
-UPDATE_CHECK_INTERVAL = 3600  # 1 heure en secondes
 CONFIG_FILE = "config.json"
 
 class ThemeManager:
     """Gère les thèmes et les paramètres de l'application"""
+
     DEFAULT_CONFIG = {
         "theme": "system",
         "auto_update": True,
-        "update_interval": "1"
     }
 
     def __init__(self):
@@ -48,6 +47,7 @@ class ThemeManager:
                     return config
         except Exception as e:
             print(f"Erreur lors du chargement de la configuration : {e}")
+
         return self.DEFAULT_CONFIG
 
     def save_config(self):
@@ -92,8 +92,6 @@ class SuperAppLauncher:
         # Vérifier les mises à jour
         self.check_for_updates(manual=False)
 
-        # Planifier la vérification périodique
-        self.root.after(UPDATE_CHECK_INTERVAL * 1000, self.periodic_update_check)
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def resource_path(self, relative_path):
@@ -102,6 +100,7 @@ class SuperAppLauncher:
             base_path = sys._MEIPASS
         except Exception:
             base_path = os.path.abspath(".")
+
         return os.path.join(base_path, relative_path)
 
     def apply_theme(self):
@@ -136,7 +135,7 @@ class SuperAppLauncher:
         # Barre de statut
         self.status_bar = ttk.Label(
             self.root,
-            text=f"Version {APP_VERSION} | © 2023 SupportX",
+            text=f"Version {APP_VERSION} | © 2025 SupportX",
             bootstyle=SECONDARY,
             anchor="center",
             font=("Arial", 9)
@@ -179,7 +178,6 @@ class SuperAppLauncher:
         version_frame.pack(pady=5)
 
         ttk.Label(version_frame, text="Version:", font=("Arial", 10)).pack(side="left")
-
         self.version_label = ttk.Label(
             version_frame,
             text=APP_VERSION,
@@ -308,7 +306,7 @@ class SuperAppLauncher:
 
         ttk.Label(
             about_frame,
-            text="© 2023 SupportX - Tous droits réservés",
+            text="© 2025 SupportX - Tous droits réservés",
             font=("Arial", 9),
             bootstyle=SECONDARY
         ).pack(side="bottom", pady=10)
@@ -359,27 +357,6 @@ class SuperAppLauncher:
         )
         auto_update_check.pack(padx=10, pady=10, anchor="w")
 
-        ttk.Label(
-            update_frame,
-            text="Intervalle de vérification:",
-            font=("Arial", 9)
-        ).pack(padx=10, pady=(0, 5), anchor="w")
-
-        self.update_interval_var = tk.StringVar(value=self.theme_manager.config["update_interval"])
-        interval_frame = ttk.Frame(update_frame)
-        interval_frame.pack(fill="x", padx=10, pady=(0, 10))
-
-        intervals = [("1 heure", "1"), ("6 heures", "6"), ("12 heures", "12"), ("1 jour", "24")]
-        for text, value in intervals:
-            ttk.Radiobutton(
-                interval_frame,
-                text=text,
-                value=value,
-                variable=self.update_interval_var,
-                command=self.save_update_interval_setting,
-                bootstyle="toolbutton"
-            ).pack(side="left", padx=5)
-
         advanced_frame = ttk.Labelframe(
             settings_frame,
             text="Paramètres avancés",
@@ -404,11 +381,6 @@ class SuperAppLauncher:
     def save_auto_update_setting(self):
         """Sauvegarde le paramètre de mise à jour automatique"""
         self.theme_manager.config["auto_update"] = self.auto_update_var.get()
-        self.theme_manager.save_config()
-
-    def save_update_interval_setting(self):
-        """Sauvegarde l'intervalle de vérification des mises à jour"""
-        self.theme_manager.config["update_interval"] = self.update_interval_var.get()
         self.theme_manager.save_config()
 
     def change_theme(self, event):
@@ -454,7 +426,6 @@ class SuperAppLauncher:
         current_time = time.strftime("%H:%M:%S")
         self.status_bar.config(text=f"Vérification des mises à jour... ({current_time})")
         self.update_status.config(text="Vérification en cours...")
-
         try:
             threading.Thread(target=self.simulate_update_check, args=(manual,), daemon=True).start()
         except Exception as e:
@@ -466,12 +437,10 @@ class SuperAppLauncher:
     def simulate_update_check(self, manual):
         """Simulation de vérification de mise à jour"""
         time.sleep(2)
-
         demo_mode = True
         if demo_mode:
             latest_version = "1.3.0"
             update_available = self.is_newer_version(latest_version)
-
             if update_available:
                 self.root.after(0, lambda: self.show_update_available(latest_version, manual))
             else:
@@ -481,7 +450,6 @@ class SuperAppLauncher:
         """Affiche qu'une mise à jour est disponible"""
         self.update_status.config(text=f"Mise à jour {latest_version} disponible!")
         self.status_bar.config(text=f"Version {latest_version} disponible - Prêt à installer")
-
         if manual or messagebox.askyesno("Mise à jour disponible", f"Version {latest_version} disponible. Voulez-vous l'installer maintenant?"):
             threading.Thread(target=self.download_and_apply_update, args=(f"{UPDATE_SERVER_URL}/update_{latest_version}.zip",), daemon=True).start()
 
@@ -505,7 +473,6 @@ class SuperAppLauncher:
             self.update_status.config(text="Téléchargement en cours...")
             self.status_bar.config(text="Téléchargement de la mise à jour...")
             self.progress["value"] = 0
-
             for i in range(0, 101, 2):
                 self.progress["value"] = i
                 self.update_status.config(text=f"Téléchargement... {i}%")
@@ -514,7 +481,6 @@ class SuperAppLauncher:
 
             self.update_status.config(text="Application de la mise à jour...")
             self.status_bar.config(text="Installation de la mise à jour...")
-
             for i in range(0, 101, 5):
                 self.progress["value"] = i
                 time.sleep(0.1)
@@ -522,23 +488,13 @@ class SuperAppLauncher:
 
             self.current_version = "1.3.0"
             self.version_label.config(text=self.current_version)
-
             self.update_status.config(text="Mise à jour terminée!")
             self.status_bar.config(text="Mise à jour installée avec succès - Redémarrage nécessaire")
-
             messagebox.showinfo("Mise à jour", "Mise à jour installée avec succès. Veuillez redémarrer l'application pour appliquer les changements.")
         except Exception as e:
             self.update_status.config(text="Échec de la mise à jour")
             self.status_bar.config(text="Échec de l'installation de la mise à jour")
             messagebox.showerror("Erreur", f"Échec de la mise à jour : {str(e)}")
-
-    def periodic_update_check(self):
-        """Vérification périodique des mises à jour"""
-        if self.auto_update_var.get():
-            self.check_for_updates(manual=False)
-
-        interval = int(self.update_interval_var.get()) * 3600 * 1000
-        self.root.after(interval, self.periodic_update_check)
 
     def on_closing(self):
         """Gestion de la fermeture de l'application"""
