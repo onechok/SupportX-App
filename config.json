@@ -1,9 +1,9 @@
 {
-    "theme": "system",
-    "auto_update": true,
-    "simulate_updates": true,
-    "app_version": "1.0.0",
-    "update_server_url": "https://supportx.ch/updates",
+    "theme": "darkly",
+    "auto_update": false,
+    "simulate_updates": false,
+    "app_version": "0.0.1",
+    "update_server_url": "https://supportx.ch/updates/version.json",
     "app_name": "SupperX APP",
     "supportx_url": "https://supportx.ch/"
 }

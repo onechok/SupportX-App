@@ -15,6 +15,7 @@ from tabs.main_tab import build_main_tab
 from tabs.web_tab import build_web_tab
 from tabs.about_tab import build_about_tab
 from tabs.settings_tab import build_settings_tab
+from tabs.history_tab import build_history_tab  # Nouvelle importation pour l'onglet Historique
 
 class SuperAppLauncher:
     def __init__(self, root):
@@ -60,14 +61,17 @@ class SuperAppLauncher:
         self.web_tab = ttk.Frame(self.notebook)
         about_tab = ttk.Frame(self.notebook)
         settings_tab = ttk.Frame(self.notebook)
+        history_tab = ttk.Frame(self.notebook)  # Nouvelle frame pour l'onglet Historique
         self.notebook.add(main_tab, text="Accueil")
         self.notebook.add(self.web_tab, text="SupportX")
         self.notebook.add(about_tab, text="À propos")
         self.notebook.add(settings_tab, text="Paramètres")
+        self.notebook.add(history_tab, text="Historique")  # Ajout de l'onglet Historique
         build_main_tab(self, main_tab)
         build_web_tab(self)
         build_about_tab(self, about_tab)
         build_settings_tab(self, settings_tab)
+        build_history_tab(self, history_tab)  # Construction du contenu de l'onglet Historique
         self.status_bar = ttk.Label(
             self.root,
             text=f"Version {self.current_version} | © 2025 SupportX",

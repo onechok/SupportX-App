@@ -1,0 +1,61 @@
+# Fichier .gitignore pour projet Python
+
+# Environnements virtuels
+venv/
+env/
+.venv/
+venv*/
+env*/
+.venv*/
+
+# Fichiers de cache Python
+__pycache__/
+*.py[cod]
+
+# Fichiers de configuration spécifiques à Python
+.python-version
+
+# Fichiers de sauvegarde et temporaires
+*~
+*.swp
+*.bak
+*.tmp
+
+# Fichiers de configuration IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Fichiers de package/distribution
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+
+# Fichiers de cache pip
+pip-wheel-metadata/
+
+# Fichiers de test et couverture
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Fichiers de journal
+*.log
+logs/
+
+# Fichiers de données sensibles
+.env
+.secrets
+*.key
+*.pem
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers de compilation spécifiques à Windows
+*.pyw
+*.pyo
