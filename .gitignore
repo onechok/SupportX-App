@@ -9,8 +9,8 @@ env*/
 .venv*/
 
 # Fichiers de cache Python
-__pycache__/
-*.py[cod]
+# __pycache__/
+# *.py[cod]
 
 # Fichiers de configuration spécifiques à Python
 .python-version
