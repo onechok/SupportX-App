@@ -27,7 +27,7 @@ def build_main_tab(self, tab):
     try:
         logo_path = os.path.join("image", "logo", "Supportx_dark.png")
         img = Image.open(logo_path)
-        img = img.resize((100, 100), Image.LANCZOS)
+        img = img.resize((300, 100), Image.LANCZOS)
         self.logo = ImageTk.PhotoImage(img)
         logo_label = ttk.Label(content_frame, image=self.logo)
         logo_label.grid(row=0, column=0, pady=(0, 20))
@@ -46,8 +46,8 @@ def build_main_tab(self, tab):
     # Titre principal
     title = ttk.Label(
         content_frame,
-        text="SupportX APP Launcher",
-        font=("Arial", 25, "bold"),
+        text="L’outil tout-en-un pensé pour simplifier votre expérience avec SupportX",
+        font=("Arial", 10, "bold"),
         bootstyle=PRIMARY
     )
     title.grid(row=1, column=0, pady=(0, 10))

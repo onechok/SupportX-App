@@ -22,7 +22,7 @@ class SuperAppLauncher:
         self.theme_manager = ThemeManager()
         config = self.theme_manager.config
         self.root.title(f"{config['app_name']} - Version {config['app_version']}")
-        self.root.geometry("1100x750")
+        self.root.geometry("1100x650")
         self.root.minsize(900, 600)
         self.style = ttk.Style()
         self.apply_theme()
