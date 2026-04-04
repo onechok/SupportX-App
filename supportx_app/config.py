@@ -8,6 +8,7 @@ from pathlib import Path
 @dataclass
 class AppConfig:
     theme: str = "system"
+    start_with_system: bool = True
     auto_update: bool = True
     simulate_updates: bool = False
     app_name: str = "SupportX App"

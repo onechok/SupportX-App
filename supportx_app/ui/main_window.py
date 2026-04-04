@@ -9,7 +9,7 @@ import webbrowser
 from pathlib import Path
 
 import requests
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QEvent, QTimer
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -34,11 +34,13 @@ if __package__ in (None, ""):
 
 try:
     from ..config import AppConfig, normalize_url
+    from ..startup import set_startup
     from ..theme import stylesheet_for
     from ..updates import UpdateInfo, UpdateService
     from ..web.overlay_view import OverlayWebView
 except ImportError:
     from supportx_app.config import AppConfig, normalize_url
+    from supportx_app.startup import set_startup
     from supportx_app.theme import stylesheet_for
     from supportx_app.updates import UpdateInfo, UpdateService
     from supportx_app.web.overlay_view import OverlayWebView
@@ -48,6 +50,8 @@ class MainWindow(QMainWindow):
     def __init__(self, app_dir: Path) -> None:
         super().__init__()
         self.app_dir = app_dir
+        self._tray_enabled = False
+        self._force_close = False
         self.config_path = app_dir / "config.json"
         self.config = AppConfig.load(self.config_path)
         self._pending_update: UpdateInfo | None = None
@@ -61,6 +65,36 @@ class MainWindow(QMainWindow):
 
         if self.config.auto_update:
             QTimer.singleShot(1200, lambda: self.check_for_updates(manual=False))
+
+    def set_tray_enabled(self, enabled: bool) -> None:
+        self._tray_enabled = bool(enabled)
+
+    def show_from_tray(self) -> None:
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+        self.status.showMessage("Application restauree")
+
+    def hide_to_tray(self) -> None:
+        self.hide()
+        self.status.showMessage("Application active en arriere-plan")
+
+    def request_quit(self) -> None:
+        self._force_close = True
+        QApplication.instance().quit()
+
+    def changeEvent(self, event) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.WindowStateChange:
+            if getattr(self, "_tray_enabled", False) and self.isMinimized():
+                QTimer.singleShot(0, self.hide_to_tray)
+
+    def closeEvent(self, event) -> None:
+        if getattr(self, "_tray_enabled", False) and not getattr(self, "_force_close", False):
+            self.hide_to_tray()
+            event.ignore()
+            return
+        super().closeEvent(event)
 
     def _build_ui(self) -> None:
         self.status = QStatusBar()
@@ -158,7 +192,7 @@ class MainWindow(QMainWindow):
         info = info_card.layout()
         info_text = QLabel(
             "Telechargez puis installez AnyDesk directement depuis cette page. "
-            "Le mot de passe administrateur peut etre requis pendant l'installation."
+            "Le mode d'installation est adapte automatiquement a votre systeme."
         )
         info_text.setWordWrap(True)
         info_text.setObjectName("cardHeadline")
@@ -175,14 +209,14 @@ class MainWindow(QMainWindow):
         btn_download = QPushButton("Telecharger AnyDesk")
         btn_download.clicked.connect(self.download_anydesk)
 
-        btn_install = QPushButton("Installer AnyDesk")
-        btn_install.clicked.connect(self.install_anydesk)
+        self.btn_install_anydesk = QPushButton("Installer AnyDesk")
+        self.btn_install_anydesk.clicked.connect(self.install_anydesk)
 
         btn_open_site = QPushButton("Ouvrir le site officiel")
-        btn_open_site.clicked.connect(lambda: webbrowser.open("https://anydesk.com/fr/downloads/linux"))
+        btn_open_site.clicked.connect(lambda: webbrowser.open("https://anydesk.com/fr/downloads"))
 
         actions.addWidget(btn_download)
-        actions.addWidget(btn_install)
+        actions.addWidget(self.btn_install_anydesk)
         actions.addWidget(btn_open_site)
 
         layout.addWidget(info_card, 0, 0)
@@ -210,6 +244,10 @@ class MainWindow(QMainWindow):
 
         updates = self._card("Mises a jour")
         up = updates.layout()
+        self.start_with_system_check = QCheckBox("Lancer l'application au demarrage du systeme")
+        self.start_with_system_check.setChecked(self.config.start_with_system)
+        self.start_with_system_check.toggled.connect(self.save_startup_setting)
+
         self.auto_update_check = QCheckBox("Verifier automatiquement les mises a jour")
         self.auto_update_check.setChecked(self.config.auto_update)
         self.auto_update_check.toggled.connect(self.save_auto_update_setting)
@@ -225,6 +263,7 @@ class MainWindow(QMainWindow):
         self.install_update_btn.setEnabled(False)
         self.install_update_btn.clicked.connect(self.install_pending_update)
 
+        up.addWidget(self.start_with_system_check)
         up.addWidget(self.auto_update_check)
         up.addWidget(self.simulate_check)
         up.addWidget(self.check_update_btn)
@@ -303,6 +342,16 @@ class MainWindow(QMainWindow):
         self.config.auto_update = bool(state)
         self.config.save(self.config_path)
         self.status.showMessage("Mises a jour automatiques sauvegardees")
+
+    def save_startup_setting(self, state: bool) -> None:
+        enabled = bool(state)
+        self.config.start_with_system = enabled
+        self.config.save(self.config_path)
+        ok, message = set_startup(enabled, self.config.app_name, self.app_dir)
+        if ok:
+            self.status.showMessage("Demarrage automatique sauvegarde")
+        else:
+            self.status.showMessage(message)
 
     def save_simulate_setting(self, state: bool) -> None:
         self.config.simulate_updates = bool(state)
@@ -390,14 +439,38 @@ class MainWindow(QMainWindow):
         downloads_dir.mkdir(parents=True, exist_ok=True)
         return downloads_dir / "anydesk_amd64.deb"
 
+    def _anydesk_download_info(self) -> tuple[str, Path, str]:
+        downloads_dir = Path.home() / "Downloads"
+        downloads_dir.mkdir(parents=True, exist_ok=True)
+
+        system = platform.system()
+        if system == "Linux":
+            return (
+                "https://download.anydesk.com/linux/anydesk_amd64.deb",
+                downloads_dir / "anydesk_amd64.deb",
+                "Linux",
+            )
+        if system == "Windows":
+            return (
+                "https://download.anydesk.com/AnyDesk.exe",
+                downloads_dir / "AnyDesk.exe",
+                "Windows",
+            )
+        if system == "Darwin":
+            return (
+                "https://download.anydesk.com/AnyDesk.dmg",
+                downloads_dir / "AnyDesk.dmg",
+                "macOS",
+            )
+        return ("", downloads_dir / "anydesk_installer", "Inconnu")
+
     def download_anydesk(self) -> None:
-        if platform.system() != "Linux":
-            QMessageBox.warning(self, "AnyDesk", "Cette installation automatique est disponible sur Linux.")
+        url, target, platform_name = self._anydesk_download_info()
+        if not url:
+            QMessageBox.warning(self, "AnyDesk", "Plateforme non supportee pour le telechargement automatique.")
             return
 
-        url = "https://download.anydesk.com/linux/anydesk_amd64.deb"
-        target = self._anydesk_deb_path()
-        self.anydesk_status.setText(f"Statut: telechargement en cours vers {target}")
+        self.anydesk_status.setText(f"Statut: telechargement AnyDesk ({platform_name}) en cours vers {target}")
         self.status.showMessage("Telechargement AnyDesk en cours...")
 
         try:
@@ -414,9 +487,34 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "AnyDesk", f"Impossible de telecharger AnyDesk.\n\n{exc}")
 
     def install_anydesk(self) -> None:
-        target = self._anydesk_deb_path()
+        _, target, platform_name = self._anydesk_download_info()
         if not target.exists():
             QMessageBox.information(self, "AnyDesk", "Le paquet n'est pas present. Lancez d'abord le telechargement.")
+            return
+
+        system = platform.system()
+        if system == "Windows":
+            self.anydesk_status.setText("Statut: lancement de l'installateur Windows...")
+            try:
+                os.startfile(str(target))  # type: ignore[attr-defined]
+                self.status.showMessage("Installateur AnyDesk lance")
+                return
+            except Exception as exc:
+                QMessageBox.warning(self, "AnyDesk", f"Impossible de lancer l'installateur Windows.\n\n{exc}")
+                return
+
+        if system == "Darwin":
+            self.anydesk_status.setText("Statut: ouverture de l'image disque macOS...")
+            try:
+                subprocess.Popen(["open", str(target)])
+                self.status.showMessage("Image disque AnyDesk ouverte")
+                return
+            except Exception as exc:
+                QMessageBox.warning(self, "AnyDesk", f"Impossible d'ouvrir l'image disque macOS.\n\n{exc}")
+                return
+
+        if system != "Linux":
+            QMessageBox.warning(self, "AnyDesk", f"Installation non supportee sur {platform_name}.")
             return
 
         self.anydesk_status.setText("Statut: preparation de l'installation...")
