@@ -1,59 +1,35 @@
-import tkinter as tk
-from tkinter import ttk
+from tkinter import StringVar, ttk
+
+from tkinterweb import HtmlFrame
 from ttkbootstrap.constants import *
-import webview
 
-class BrowserFrame:
-    """Simule un composant navigateur en ouvrant une fenêtre PyWebView."""
-    def __init__(self, url, title="Navigateur intégré"):
-        self.url = url
-        self.title = title
-
-    def open(self):
-        # PyWebView doit être appelé dans le thread principal
-        webview.create_window(self.title, self.url)
-        webview.start()
 
 def build_history_tab(app, tab):
-    """Ajoute un bouton dans l'onglet Historique pour afficher le site dans PyWebView."""
-    history_frame = ttk.Frame(tab, padding=20)
-    history_frame.pack(fill="both", expand=True)
+    shell = ttk.Frame(tab)
+    shell.pack(fill="both", expand=True)
+
+    top = ttk.Labelframe(shell, text="Historique SupportX", style="Card.TLabelframe", bootstyle=PRIMARY)
+    top.pack(fill="x", padx=8, pady=(4, 8))
+    top.grid_columnconfigure(0, weight=1)
 
     ttk.Label(
-        history_frame,
-        text="Historique SupportX",
-        font=("Arial", 14, "bold"),
-        bootstyle=PRIMARY
-    ).pack(pady=10)
+        top,
+        text="Consultez les informations recentes sans quitter l'application.",
+        style="CardTitle.TLabel",
+    ).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 6))
 
-    ttk.Label(
-        history_frame,
-        text="Cliquez sur le bouton ci-dessous pour afficher l'historique en ligne dans une fenêtre intégrée.",
-        font=("Arial", 11),
-        wraplength=700,
-        justify="center"
-    ).pack(pady=10)
+    history_url = "https://supportx.ch/"
+    url_var = StringVar(value=history_url)
+    ttk.Entry(top, textvariable=url_var).grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
 
-    browser = BrowserFrame(url="https://supportx.ch", title="SupportX - Historique")
+    actions = ttk.Frame(top)
+    actions.grid(row=1, column=1, padx=10, pady=(0, 10))
 
-    ttk.Button(
-        history_frame,
-        text="Ouvrir l'historique Web",
-        bootstyle=SUCCESS,
-        command=browser.open
-    ).pack(pady=20)
+    frame = HtmlFrame(shell, messages_enabled=False)
+    frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+    frame.load_website(history_url)
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    root.title("SupportX App")
-    root.geometry("800x600")
-
-    notebook = ttk.Notebook(root)
-    notebook.pack(fill="both", expand=True)
-
-    history_tab = ttk.Frame(notebook)
-    notebook.add(history_tab, text="Historique")
-
-    build_history_tab(root, history_tab)
-
-    root.mainloop()
+    ttk.Button(actions, text="Charger", bootstyle=PRIMARY, command=lambda: frame.load_url(url_var.get())).pack(
+        side="left", padx=(0, 6)
+    )
+    ttk.Button(actions, text="Actualiser", bootstyle=INFO, command=frame.reload).pack(side="left")

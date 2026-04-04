@@ -1,85 +1,65 @@
-from tkinter import ttk, StringVar, BooleanVar
+from tkinter import BooleanVar, StringVar, ttk
+
 from ttkbootstrap.constants import *
 
+
 def build_settings_tab(self, tab):
-    settings_frame = ttk.Frame(tab, padding=20)
-    settings_frame.pack(fill="both", expand=True)
+    shell = ttk.Frame(tab)
+    shell.pack(fill="both", expand=True)
+    shell.grid_columnconfigure(0, weight=1)
+    shell.grid_columnconfigure(1, weight=1)
 
-    theme_frame = ttk.Labelframe(
-        settings_frame,
-        text="Personnalisation de l'interface",
-        bootstyle=INFO
-    )
-    theme_frame.pack(fill="x", pady=10, padx=5)
+    appearance = ttk.Labelframe(shell, text="Apparence", style="Card.TLabelframe", bootstyle=INFO)
+    appearance.grid(row=0, column=0, sticky="nsew", padx=(8, 5), pady=(4, 8))
 
-    ttk.Label(
-        theme_frame,
-        text="Thème de l'application:",
-        font=("Arial", 10)
-    ).pack(padx=10, pady=(10, 5), anchor="w")
-
+    ttk.Label(appearance, text="Theme global", style="CardTitle.TLabel").pack(anchor="w", padx=10, pady=(8, 4))
     self.theme_var = StringVar(value=self.theme_manager.config["theme"])
     theme_combo = ttk.Combobox(
-        theme_frame,
+        appearance,
         textvariable=self.theme_var,
-        values=["system", "darkly", "flatly", "vapor", "minty"],
+        values=["system", "darkly", "flatly", "minty", "litera", "morph"],
         state="readonly",
-        width=15
+        width=18,
     )
-    theme_combo.pack(padx=10, pady=(0, 10), anchor="w")
+    theme_combo.pack(anchor="w", padx=10, pady=(0, 10))
     theme_combo.bind("<<ComboboxSelected>>", self.change_theme)
 
-    update_frame = ttk.Labelframe(
-        settings_frame,
-        text="Mises à jour automatiques",
-        bootstyle=INFO
-    )
-    update_frame.pack(fill="x", pady=10, padx=5)
+    updates = ttk.Labelframe(shell, text="Mises a jour", style="Card.TLabelframe", bootstyle=SUCCESS)
+    updates.grid(row=0, column=1, sticky="nsew", padx=(5, 8), pady=(4, 8))
 
     self.auto_update_var = BooleanVar(value=self.theme_manager.config["auto_update"])
-    auto_update_check = ttk.Checkbutton(
-        update_frame,
-        text="Vérifier automatiquement les mises à jour",
+    ttk.Checkbutton(
+        updates,
+        text="Verifier automatiquement les mises a jour",
         variable=self.auto_update_var,
         bootstyle="round-toggle",
-        command=self.save_auto_update_setting
-    )
-    auto_update_check.pack(padx=10, pady=10, anchor="w")
-
-    simulation_frame = ttk.Labelframe(
-        settings_frame,
-        text="Mode Développeur",
-        bootstyle=INFO
-    )
-    simulation_frame.pack(fill="x", pady=10, padx=5)
+        command=self.save_auto_update_setting,
+    ).pack(anchor="w", padx=10, pady=(10, 6))
 
     self.simulate_var = BooleanVar(value=self.theme_manager.config["simulate_updates"])
-    simulate_check = ttk.Checkbutton(
-        simulation_frame,
-        text="Activer la simulation des mises à jour",
+    ttk.Checkbutton(
+        updates,
+        text="Activer le mode simulation",
         variable=self.simulate_var,
         bootstyle="round-toggle",
-        command=self.save_simulate_setting
-    )
-    simulate_check.pack(padx=10, pady=10, anchor="w")
+        command=self.save_simulate_setting,
+    ).pack(anchor="w", padx=10, pady=(0, 10))
 
-    advanced_frame = ttk.Labelframe(
-        settings_frame,
-        text="Paramètres avancés",
-        bootstyle=WARNING
-    )
-    advanced_frame.pack(fill="x", pady=10, padx=5)
+    advanced = ttk.Labelframe(shell, text="Actions systeme", style="Card.TLabelframe", bootstyle=WARNING)
+    advanced.grid(row=1, column=0, columnspan=2, sticky="ew", padx=8, pady=(0, 8))
+
+    actions = ttk.Frame(advanced)
+    actions.pack(fill="x", padx=10, pady=10)
 
     ttk.Button(
-        advanced_frame,
+        actions,
         text="Ouvrir le dossier de l'application",
+        bootstyle=(OUTLINE, WARNING),
         command=self.open_app_folder,
-        bootstyle=(OUTLINE, WARNING)
-    ).pack(padx=10, pady=10, anchor="w")
-
+    ).pack(side="left", padx=(0, 8))
     ttk.Button(
-        advanced_frame,
-        text="Forcer la vérification des mises à jour",
+        actions,
+        text="Verifier maintenant",
+        bootstyle=WARNING,
         command=lambda: self.check_for_updates(manual=True),
-        bootstyle=(OUTLINE, WARNING)
-    ).pack(padx=10, pady=(0, 10), anchor="w")
+    ).pack(side="left")

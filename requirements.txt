@@ -4,3 +4,5 @@ requests
 Pillow
 darkdetect
 pywebview
+qtpy
+PySide6
