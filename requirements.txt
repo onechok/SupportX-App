@@ -1,8 +1,2 @@
-tkinterweb
-ttkbootstrap
 requests
-Pillow
-darkdetect
-pywebview
-qtpy
 PySide6

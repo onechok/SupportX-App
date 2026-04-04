@@ -5,6 +5,19 @@ function Write-Step {
     Write-Host "[SupportX] $Message"
 }
 
+function Invoke-Checked {
+    param(
+        [string]$Description,
+        [scriptblock]$Command
+    )
+
+    Write-Step $Description
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Description a echoue (code $LASTEXITCODE)."
+    }
+}
+
 function Find-SystemPython {
     $pyCmd = Get-Command py -ErrorAction SilentlyContinue
     if ($pyCmd) {
@@ -79,15 +92,15 @@ if (-not (Test-Path $venvPython)) {
         throw "Python 3.10+ introuvable. Installez Python puis relancez install-supportx.bat."
     }
 
-    Write-Step "Creation de l'environnement virtuel..."
-    & $systemPython -m venv (Join-Path $scriptDir ".venv")
+    Invoke-Checked "Creation de l'environnement virtuel" { & $systemPython -m venv (Join-Path $scriptDir ".venv") }
 }
 
-Write-Step "Mise a jour de pip..."
-& $venvPython -m pip install --upgrade pip
+if (-not (Test-Path $venvPython)) {
+    throw "python.exe introuvable dans .venv apres creation de l'environnement."
+}
 
-Write-Step "Installation des dependances du projet..."
-& $venvPython -m pip install -r $requirementsPath
+Invoke-Checked "Mise a jour de pip" { & $venvPython -m pip install --upgrade pip }
+Invoke-Checked "Installation des dependances du projet" { & $venvPython -m pip install -r $requirementsPath }
 
 $desktopPath = [Environment]::GetFolderPath('Desktop')
 $startMenuPath = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\SupportX.lnk"

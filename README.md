@@ -37,11 +37,16 @@ L'installateur:
 2. L'installeur vérifie Python puis:
 	- utilise Python existant si disponible,
 	- sinon tente l'installation via winget.
-3. Une fois terminé, utilisez le raccourci `SupportX` créé sur le bureau.
+3. Installe uniquement les dépendances nécessaires (PySide6 + requests), sans pywebview/pythonnet.
+4. Une fois terminé, utilisez le raccourci `SupportX` créé sur le bureau.
 
 Si Windows SmartScreen bloque le script:
 - cliquer sur Informations complémentaires,
 - puis Exécuter quand même.
+
+Si l'installation pip échoue:
+- l'installeur s'arrête immédiatement,
+- corrigez l'erreur affichée puis relancez `install-supportx.bat`.
 
 ## Release
 - Les releases sont publiées automatiquement via GitHub Actions lors d'un push de tag `v*`.
