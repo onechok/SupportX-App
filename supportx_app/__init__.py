@@ -1,0 +1,1 @@
+"""SupportX desktop application package."""
