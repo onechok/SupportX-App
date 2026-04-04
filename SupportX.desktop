@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=SupportX
+Comment=Launch SupportX App
+Exec=bash -c 'cd "$(dirname "%k")" && ./start-supportx.sh'
+Icon=./image/logo/logo-notification.ico
+Terminal=false
+Categories=Utility;
+StartupNotify=true
