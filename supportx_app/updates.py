@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -18,6 +19,10 @@ class UpdateInfo:
     notes: str
     asset_url: str
     release_url: str
+
+
+class UpdateCheckError(RuntimeError):
+    """Raised when update metadata cannot be fetched or interpreted."""
 
 
 class UpdateService:
@@ -131,19 +136,55 @@ class UpdateService:
     def _fetch_latest_github_release(self) -> dict:
         owner, repo = self._repo_coordinates()
         if not owner or not repo:
-            raise ValueError("Repository GitHub invalide. Configure github_repository_url ou github_owner/github_repo.")
+            raise UpdateCheckError("Repository GitHub invalide. Configure github_repository_url ou github_owner/github_repo.")
 
         url = (
             f"{self.config.github_api_url.rstrip('/')}/repos/"
             f"{owner}/{repo}/releases/latest"
         )
-        headers = {"Accept": "application/vnd.github+json"}
-        if self.config.github_token:
-            headers["Authorization"] = f"Bearer {self.config.github_token}"
+        token = self._auth_token()
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "SupportX-Updater",
+        }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
 
-        response = requests.get(url, timeout=20, headers=headers)
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = requests.get(url, timeout=20, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status == 404 and not token:
+                raise UpdateCheckError(
+                    "Erreur 404 GitHub: release introuvable ou acces prive. "
+                    "Si le repository est prive, renseignez github_token dans config.json "
+                    "ou la variable d'environnement SUPPORTX_GITHUB_TOKEN."
+                ) from exc
+
+            if status == 404:
+                raise UpdateCheckError(
+                    "Erreur 404 GitHub: aucune release publiee non pre-release n'a ete trouvee "
+                    "pour ce repository."
+                ) from exc
+
+            if status in {401, 403}:
+                raise UpdateCheckError(
+                    "Authentification GitHub refusee (401/403). Verifiez la validite du token "
+                    "et ses permissions sur le repository."
+                ) from exc
+
+            raise UpdateCheckError(f"Echec GitHub API ({status}): {exc}") from exc
+        except requests.RequestException as exc:
+            raise UpdateCheckError(f"Echec reseau lors de la verification GitHub: {exc}") from exc
+
+    def _auth_token(self) -> str:
+        cfg_token = (self.config.github_token or "").strip()
+        if cfg_token:
+            return cfg_token
+        env_token = (os.getenv("SUPPORTX_GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN") or "").strip()
+        return env_token
 
     def _select_release_asset_url(self, release: dict) -> str:
         assets = release.get("assets") or []
