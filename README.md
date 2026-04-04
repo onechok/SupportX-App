@@ -4,6 +4,11 @@ Application desktop SupportX multi-OS (Linux, macOS, Windows).
 
 ## Installation en 3 clics
 
+### Option recommandee Windows (installateur .exe)
+1. Telechargez `SupportX-Setup-vX.Y.Z.exe` depuis la release GitHub.
+2. Lancez l'installeur puis suivez l'assistant.
+3. Ouvrez `SupportX App` depuis le Bureau ou le menu Demarrer.
+
 ### 1. Ouvrir le dossier du projet
 - Placez le dossier SupportX-App où vous voulez le conserver.
 
