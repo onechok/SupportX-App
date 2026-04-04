@@ -15,6 +15,11 @@ class AppConfig:
     supportx_url: str = "https://supportx.ch/"
     history_url: str = "https://supportx.ch/"
     update_server_url: str = "https://supportx.ch/updates/version.json"
+    github_owner: str = "onechok"
+    github_repo: str = "SupportX-App"
+    github_repository_url: str = "https://github.com/onechok/SupportX-App"
+    github_api_url: str = "https://api.github.com"
+    github_token: str = ""
 
     @classmethod
     def load(cls, path: Path) -> "AppConfig":

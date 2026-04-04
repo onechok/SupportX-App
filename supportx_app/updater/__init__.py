@@ -1,0 +1,1 @@
+"""SupportX updater sub-application."""
