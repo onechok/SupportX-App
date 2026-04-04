@@ -311,7 +311,15 @@ class MainWindow(QMainWindow):
             "- supportx_app/updates.py: verification et orchestration updater\n"
             "- supportx_app/updater/: sous-application de mise a jour\n"
             "- supportx_app/web/: composant navigateur integre\n"
-            "- supportx_app/ui/main_window.py: interface principale\n"
+            "- supportx_app/ui/main_window.py: interface principale\n\n"
+            "Historique des versions (essentiel):\n\n"
+            "- v0.0.3: base multi-OS, tray en arriere-plan, demarrage systeme, pipeline release GitHub.\n"
+            "- v0.0.4: lanceurs sans commande Linux/macOS/Windows + raccourci desktop Linux.\n"
+            "- v0.0.5: installateur Windows robuste (verification Python, venv, raccourcis).\n"
+            "- v0.0.6: correction dependances Windows (suppression pywebview/pythonnet) pour fiabilite d'installation.\n"
+            "- v0.0.7: ajout de la generation automatique de l'installeur Windows .exe (Inno Setup).\n"
+            "- v0.0.8: mise a jour uniquement sur confirmation utilisateur, verification non bloquante.\n"
+            "- v0.0.9: correction des chemins Inno Setup pour une build .exe release fiable.\n"
         )
 
         layout.addWidget(title)
