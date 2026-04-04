@@ -5,6 +5,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import threading
 import webbrowser
 from pathlib import Path
 
@@ -55,6 +56,7 @@ class MainWindow(QMainWindow):
         self.config_path = app_dir / "config.json"
         self.config = AppConfig.load(self.config_path)
         self._pending_update: UpdateInfo | None = None
+        self._update_check_in_progress = False
 
         self.setWindowTitle(f"{self.config.app_name} - v{self.config.app_version}")
         self.resize(1360, 840)
@@ -363,19 +365,52 @@ class MainWindow(QMainWindow):
         webbrowser.open(normalize_url(url, self.config.supportx_url))
 
     def check_for_updates(self, manual: bool) -> None:
+        if self._update_check_in_progress:
+            if manual:
+                QMessageBox.information(self, "Mises a jour", "Une verification est deja en cours.")
+            return
+
+        self._update_check_in_progress = True
+        self.check_update_btn.setEnabled(False)
         self.update_status_label.setText("Verification des mises a jour en cours...")
         self.status.showMessage("Verification des mises a jour...")
 
-        service = UpdateService(self.config)
-        try:
-            update = service.check()
-        except Exception as exc:
+        def worker() -> None:
+            service = UpdateService(self.config)
+            update: UpdateInfo | None = None
+            error: Exception | None = None
+            try:
+                update = service.check()
+            except Exception as exc:
+                error = exc
+
+            QTimer.singleShot(0, lambda: self._on_update_check_finished(manual, update, error))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _on_update_check_finished(
+        self,
+        manual: bool,
+        update: UpdateInfo | None,
+        error: Exception | None,
+    ) -> None:
+        self._update_check_in_progress = False
+        self.check_update_btn.setEnabled(True)
+
+        if error is not None:
             self._pending_update = None
             self.install_update_btn.setEnabled(False)
             self.update_status_label.setText("Echec de la verification des mises a jour")
             self.status.showMessage("Erreur de verification")
             if manual:
-                QMessageBox.warning(self, "Mises a jour", f"Impossible de verifier les mises a jour.\n\n{exc}")
+                QMessageBox.warning(self, "Mises a jour", f"Impossible de verifier les mises a jour.\n\n{error}")
+            return
+
+        if update is None:
+            self._pending_update = None
+            self.install_update_btn.setEnabled(False)
+            self.update_status_label.setText("Aucune information de mise a jour disponible")
+            self.status.showMessage("Verification des mises a jour terminee")
             return
 
         if update.has_update:
@@ -393,9 +428,6 @@ class MainWindow(QMainWindow):
                 )
                 if answer == QMessageBox.StandardButton.Yes:
                     self.install_pending_update()
-            else:
-                # Auto-update mode: launch updater silently then close this app.
-                self.install_pending_update(silent=True)
         else:
             self._pending_update = None
             self.install_update_btn.setEnabled(False)
@@ -408,6 +440,16 @@ class MainWindow(QMainWindow):
         if not self._pending_update:
             QMessageBox.information(self, "Mises a jour", "Aucune mise a jour en attente.")
             return
+
+        if not silent:
+            answer = QMessageBox.question(
+                self,
+                "Confirmer la mise a jour",
+                "Voulez-vous lancer la mise a jour maintenant ?\n\n"
+                "L'application se fermera pendant l'installation.",
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
 
         service = UpdateService(self.config)
         entrypoint = self.app_dir / "launcher.py"
