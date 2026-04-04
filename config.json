@@ -1,7 +1,7 @@
 {
     "theme": "system",
     "start_with_system": true,
-    "auto_update": true,
+    "auto_update": false,
     "simulate_updates": false,
     "app_name": "SupperX APP",
     "app_version": "0.0.5",
