@@ -10,7 +10,7 @@ import webbrowser
 from pathlib import Path
 
 import requests
-from PySide6.QtCore import QEvent, QTimer
+from PySide6.QtCore import QObject, QEvent, QTimer, Signal
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -47,6 +47,10 @@ except ImportError:
     from supportx_app.web.overlay_view import OverlayWebView
 
 
+class UpdateCheckBridge(QObject):
+    completed = Signal(bool, object, object)
+
+
 class MainWindow(QMainWindow):
     def __init__(self, app_dir: Path) -> None:
         super().__init__()
@@ -57,6 +61,8 @@ class MainWindow(QMainWindow):
         self.config = AppConfig.load(self.config_path)
         self._pending_update: UpdateInfo | None = None
         self._update_check_in_progress = False
+        self._update_check_bridge = UpdateCheckBridge(self)
+        self._update_check_bridge.completed.connect(self._on_update_check_finished)
 
         self.setWindowTitle(f"{self.config.app_name} - v{self.config.app_version}")
         self.resize(1360, 840)
@@ -392,7 +398,7 @@ class MainWindow(QMainWindow):
             except Exception as exc:
                 error = exc
 
-            QTimer.singleShot(0, lambda: self._on_update_check_finished(manual, update, error))
+            self._update_check_bridge.completed.emit(manual, update, error)
 
         threading.Thread(target=worker, daemon=True).start()
 
