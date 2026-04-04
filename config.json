@@ -4,7 +4,7 @@
     "auto_update": false,
     "simulate_updates": false,
     "app_name": "SupperX APP",
-    "app_version": "0.0.5",
+    "app_version": "0.1.2",
     "supportx_url": "https://supportx.ch/",
     "history_url": "https://supportx.ch/",
     "update_server_url": "https://supportx.ch/updates/version.json",

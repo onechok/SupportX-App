@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -37,13 +39,51 @@ def parse_args() -> argparse.Namespace:
 def is_process_alive(pid: int) -> bool:
     if pid <= 0:
         return False
+
+    if platform.system() == "Windows":
+        return _is_process_alive_windows(pid)
+
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
     except PermissionError:
         return True
+    except Exception:
+        # Garde-fou: certaines versions Python/Windows remontent des erreurs internes
+        # via os.kill; on ne doit pas casser l'updater pour autant.
+        return False
     return True
+
+
+def _is_process_alive_windows(pid: int) -> bool:
+    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+    STILL_ACTIVE = 259
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    open_process = kernel32.OpenProcess
+    open_process.argtypes = [ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32]
+    open_process.restype = ctypes.c_void_p
+
+    get_exit_code_process = kernel32.GetExitCodeProcess
+    get_exit_code_process.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint32)]
+    get_exit_code_process.restype = ctypes.c_int
+
+    close_handle = kernel32.CloseHandle
+    close_handle.argtypes = [ctypes.c_void_p]
+    close_handle.restype = ctypes.c_int
+
+    handle = open_process(PROCESS_QUERY_LIMITED_INFORMATION, 0, int(pid))
+    if not handle:
+        return False
+
+    try:
+        exit_code = ctypes.c_uint32(0)
+        if not get_exit_code_process(handle, ctypes.byref(exit_code)):
+            return False
+        return exit_code.value == STILL_ACTIVE
+    finally:
+        close_handle(handle)
 
 
 class UpdateWorker(QThread):
