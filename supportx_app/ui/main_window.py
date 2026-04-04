@@ -10,21 +10,26 @@ import webbrowser
 from pathlib import Path
 
 import requests
-from PySide6.QtCore import QObject, QEvent, QTimer, Signal
+from PySide6.QtCore import QObject, QEvent, QTimer, Signal, Qt
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
     QCheckBox,
     QComboBox,
+    QFileDialog,
     QFrame,
     QGridLayout,
+    QHeaderView,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
     QStackedWidget,
     QStatusBar,
+    QTableWidget,
+    QTableWidgetItem,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -39,12 +44,14 @@ try:
     from ..theme import stylesheet_for
     from ..updates import UpdateInfo, UpdateService
     from ..web.overlay_view import OverlayWebView
+    from ..youtube import YouTubeDownloadManager
 except ImportError:
     from supportx_app.config import AppConfig, normalize_url
     from supportx_app.startup import set_startup
     from supportx_app.theme import stylesheet_for
     from supportx_app.updates import UpdateInfo, UpdateService
     from supportx_app.web.overlay_view import OverlayWebView
+    from supportx_app.youtube import YouTubeDownloadManager
 
 
 class UpdateCheckBridge(QObject):
@@ -63,6 +70,13 @@ class MainWindow(QMainWindow):
         self._update_check_in_progress = False
         self._update_check_bridge = UpdateCheckBridge(self)
         self._update_check_bridge.completed.connect(self._on_update_check_finished)
+        self.youtube_manager = YouTubeDownloadManager(self)
+
+        self.youtube_manager.task_created.connect(self._on_youtube_task_created)
+        self.youtube_manager.task_updated.connect(self._on_youtube_task_updated)
+        self.youtube_manager.task_removed.connect(self._on_youtube_task_removed)
+        self.youtube_manager.task_log.connect(self._on_youtube_task_log)
+        self.youtube_manager.availability_changed.connect(self._on_youtube_availability_changed)
 
         self.setWindowTitle(f"{self.config.app_name} - v{self.config.app_version}")
         self.resize(1360, 840)
@@ -124,11 +138,13 @@ class MainWindow(QMainWindow):
         self.stack.setObjectName("contentStack")
         self.web_page = self._build_web_page()
         self.anydesk_page = self._build_anydesk_page()
+        self.youtube_page = self._build_youtube_page()
         self.settings_page = self._build_settings_page()
         self.about_page = self._build_about_page()
 
         self.stack.addWidget(self.web_page)
         self.stack.addWidget(self.anydesk_page)
+        self.stack.addWidget(self.youtube_page)
         self.stack.addWidget(self.settings_page)
         self.stack.addWidget(self.about_page)
         content_layout.addWidget(self.stack, 1)
@@ -159,7 +175,7 @@ class MainWindow(QMainWindow):
         self.nav_group = QButtonGroup(self)
         self.nav_group.setExclusive(True)
 
-        for index, label in enumerate(["SupportX Web", "AnyDesk", "Parametres", "A propos"]):
+        for index, label in enumerate(["SupportX Web", "AnyDesk", "YouTube", "Parametres", "A propos"]):
             btn = QPushButton(label)
             btn.setCheckable(True)
             btn.setObjectName("navButton")
@@ -298,6 +314,127 @@ class MainWindow(QMainWindow):
         layout.setColumnStretch(1, 1)
         return page
 
+    def _build_youtube_page(self) -> QWidget:
+        page = QWidget()
+        layout = QGridLayout(page)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setHorizontalSpacing(12)
+        layout.setVerticalSpacing(12)
+
+        controls = self._card("Telechargement YouTube")
+        controls_layout = controls.layout()
+
+        intro = QLabel(
+            "Collez un lien video ou playlist, choisissez le format, puis ajoutez a la file. "
+            "Le gestionnaire execute les telechargements de facon fiable et sequentielle."
+        )
+        intro.setWordWrap(True)
+        intro.setObjectName("cardHeadline")
+        controls_layout.addWidget(intro)
+
+        self.youtube_url_input = QLineEdit()
+        self.youtube_url_input.setPlaceholderText(
+            "Lien YouTube (video unique, shorts, live, playlist)..."
+        )
+        controls_layout.addWidget(self.youtube_url_input)
+
+        row1 = QHBoxLayout()
+        self.youtube_type_combo = QComboBox()
+        self.youtube_type_combo.addItems(["mp3", "mp4"])
+        self.youtube_type_combo.currentTextChanged.connect(self._on_youtube_media_type_changed)
+
+        self.youtube_quality_combo = QComboBox()
+        self.youtube_quality_combo.addItems(["Best", "High", "Medium", "Low"])
+
+        self.youtube_playlist_check = QCheckBox("Autoriser playlist")
+        self.youtube_playlist_check.setChecked(True)
+
+        row1.addWidget(QLabel("Format"))
+        row1.addWidget(self.youtube_type_combo)
+        row1.addWidget(QLabel("Qualite"))
+        row1.addWidget(self.youtube_quality_combo)
+        row1.addWidget(self.youtube_playlist_check)
+        row1.addStretch(1)
+        controls_layout.addLayout(row1)
+
+        row2 = QHBoxLayout()
+        self.youtube_output_input = QLineEdit()
+        output_default = str(Path.home() / "Downloads" / "SupportX-Media")
+        self.youtube_output_input.setText(output_default)
+        row2.addWidget(self.youtube_output_input, 1)
+
+        browse_btn = QPushButton("Choisir dossier")
+        browse_btn.clicked.connect(self._browse_youtube_output_dir)
+        row2.addWidget(browse_btn)
+        controls_layout.addLayout(row2)
+
+        action_row = QHBoxLayout()
+        self.youtube_add_btn = QPushButton("Ajouter a la file")
+        self.youtube_add_btn.clicked.connect(self._add_youtube_task)
+        action_row.addWidget(self.youtube_add_btn)
+
+        self.youtube_cancel_btn = QPushButton("Annuler selection")
+        self.youtube_cancel_btn.clicked.connect(self._cancel_selected_youtube_task)
+        action_row.addWidget(self.youtube_cancel_btn)
+
+        self.youtube_retry_btn = QPushButton("Relancer echec")
+        self.youtube_retry_btn.clicked.connect(self._retry_selected_youtube_task)
+        action_row.addWidget(self.youtube_retry_btn)
+
+        self.youtube_remove_btn = QPushButton("Supprimer selection")
+        self.youtube_remove_btn.clicked.connect(self._remove_selected_youtube_task)
+        action_row.addWidget(self.youtube_remove_btn)
+
+        controls_layout.addLayout(action_row)
+
+        utility_row = QHBoxLayout()
+        clear_btn = QPushButton("Nettoyer termines")
+        clear_btn.clicked.connect(self.youtube_manager.clear_finished)
+        utility_row.addWidget(clear_btn)
+
+        open_dir_btn = QPushButton("Ouvrir dossier")
+        open_dir_btn.clicked.connect(self._open_youtube_output_dir)
+        utility_row.addWidget(open_dir_btn)
+
+        utility_row.addStretch(1)
+        controls_layout.addLayout(utility_row)
+
+        self.youtube_health_label = QLabel("Verification dependance yt-dlp...")
+        self.youtube_health_label.setObjectName("mutedLabel")
+        self.youtube_health_label.setWordWrap(True)
+        controls_layout.addWidget(self.youtube_health_label)
+
+        queue = self._card("Gestionnaire de telechargements")
+        queue_layout = queue.layout()
+
+        self.youtube_table = QTableWidget(0, 6)
+        self.youtube_table.setHorizontalHeaderLabels(["ID", "Format", "Qualite", "Source", "Statut", "Progression"])
+        self.youtube_table.verticalHeader().setVisible(False)
+        self.youtube_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.youtube_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.youtube_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.youtube_table.setAlternatingRowColors(True)
+        self.youtube_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.youtube_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.youtube_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.youtube_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        self.youtube_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self.youtube_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        queue_layout.addWidget(self.youtube_table)
+
+        self.youtube_logs = QTextEdit()
+        self.youtube_logs.setReadOnly(True)
+        self.youtube_logs.setPlaceholderText("Journal des telechargements")
+        queue_layout.addWidget(self.youtube_logs)
+
+        layout.addWidget(controls, 0, 0)
+        layout.addWidget(queue, 1, 0)
+        layout.setRowStretch(0, 0)
+        layout.setRowStretch(1, 1)
+
+        self.youtube_manager.refresh_availability()
+        return page
+
     def _build_about_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
@@ -344,6 +481,170 @@ class MainWindow(QMainWindow):
         header.setObjectName("cardTitle")
         layout.addWidget(header)
         return frame
+
+    def _on_youtube_media_type_changed(self, media_type: str) -> None:
+        self.youtube_quality_combo.clear()
+        if media_type == "mp3":
+            self.youtube_quality_combo.addItems(["Best", "High", "Medium", "Low"])
+            return
+        self.youtube_quality_combo.addItems(["Best", "1080p", "720p", "480p", "360p"])
+
+    def _browse_youtube_output_dir(self) -> None:
+        current = self.youtube_output_input.text().strip() or str(Path.home() / "Downloads")
+        target = QFileDialog.getExistingDirectory(self, "Choisir un dossier de destination", current)
+        if target:
+            self.youtube_output_input.setText(target)
+
+    def _add_youtube_task(self) -> None:
+        url = self.youtube_url_input.text().strip()
+        if not url:
+            QMessageBox.warning(self, "YouTube", "Veuillez fournir un lien YouTube valide.")
+            return
+
+        if "youtube.com" not in url and "youtu.be" not in url:
+            answer = QMessageBox.question(
+                self,
+                "Lien non standard",
+                "Ce lien ne ressemble pas a une URL YouTube. Voulez-vous continuer ?",
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+
+        output_dir = self.youtube_output_input.text().strip()
+        if not output_dir:
+            QMessageBox.warning(self, "YouTube", "Veuillez choisir un dossier de destination.")
+            return
+
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+        available, message = self.youtube_manager.get_availability()
+        if not available:
+            QMessageBox.warning(self, "YouTube", message)
+            return
+
+        selected_media = self.youtube_type_combo.currentText()
+        ok, requirement_message = self.youtube_manager.validate_task_requirements(selected_media)
+        if not ok:
+            QMessageBox.warning(self, "YouTube", requirement_message)
+            return
+        if requirement_message:
+            self.status.showMessage(requirement_message)
+
+        self.youtube_manager.create_task(
+            url=url,
+            media_type=selected_media,
+            quality=self.youtube_quality_combo.currentText(),
+            allow_playlist=self.youtube_playlist_check.isChecked(),
+            output_dir=output_dir,
+            start_now=True,
+        )
+        self.youtube_url_input.clear()
+        self.status.showMessage("Telechargement ajoute a la file")
+
+    def _selected_youtube_task_id(self) -> int | None:
+        row = self.youtube_table.currentRow()
+        if row < 0:
+            return None
+        item = self.youtube_table.item(row, 0)
+        if item is None:
+            return None
+        task_id = item.data(Qt.ItemDataRole.UserRole)
+        if isinstance(task_id, int):
+            return task_id
+        return None
+
+    def _find_youtube_row(self, task_id: int) -> int:
+        for row in range(self.youtube_table.rowCount()):
+            item = self.youtube_table.item(row, 0)
+            if item is None:
+                continue
+            if item.data(Qt.ItemDataRole.UserRole) == task_id:
+                return row
+        return -1
+
+    def _cancel_selected_youtube_task(self) -> None:
+        task_id = self._selected_youtube_task_id()
+        if task_id is None:
+            QMessageBox.information(self, "YouTube", "Selectionnez une ligne a annuler.")
+            return
+        self.youtube_manager.cancel_task(task_id)
+
+    def _retry_selected_youtube_task(self) -> None:
+        task_id = self._selected_youtube_task_id()
+        if task_id is None:
+            QMessageBox.information(self, "YouTube", "Selectionnez une ligne a relancer.")
+            return
+        new_id = self.youtube_manager.retry_task(task_id)
+        if new_id is None:
+            QMessageBox.warning(self, "YouTube", "Impossible de relancer cette tache.")
+
+    def _remove_selected_youtube_task(self) -> None:
+        task_id = self._selected_youtube_task_id()
+        if task_id is None:
+            QMessageBox.information(self, "YouTube", "Selectionnez une ligne a supprimer.")
+            return
+        self.youtube_manager.remove_task(task_id)
+
+    def _open_youtube_output_dir(self) -> None:
+        target = self.youtube_output_input.text().strip()
+        if not target:
+            QMessageBox.information(self, "YouTube", "Aucun dossier configure.")
+            return
+        target_path = Path(target)
+        target_path.mkdir(parents=True, exist_ok=True)
+        try:
+            if platform.system() == "Windows":
+                os.startfile(str(target_path))  # type: ignore[attr-defined]
+            elif platform.system() == "Darwin":
+                subprocess.Popen(["open", str(target_path)])
+            else:
+                subprocess.Popen(["xdg-open", str(target_path)])
+        except Exception as exc:
+            QMessageBox.warning(self, "YouTube", f"Impossible d'ouvrir le dossier.\n\n{exc}")
+
+    def _on_youtube_availability_changed(self, available: bool, message: str) -> None:
+        self.youtube_health_label.setText(message)
+        self.youtube_add_btn.setEnabled(available)
+        self.youtube_cancel_btn.setEnabled(available)
+        self.youtube_retry_btn.setEnabled(available)
+        self.youtube_remove_btn.setEnabled(True)
+
+    def _on_youtube_task_created(self, task: dict) -> None:
+        row = self.youtube_table.rowCount()
+        self.youtube_table.insertRow(row)
+
+        id_item = QTableWidgetItem(str(task["task_id"]))
+        id_item.setData(Qt.ItemDataRole.UserRole, task["task_id"])
+        self.youtube_table.setItem(row, 0, id_item)
+        self.youtube_table.setItem(row, 1, QTableWidgetItem(task["media_type"].upper()))
+        self.youtube_table.setItem(row, 2, QTableWidgetItem(task["quality"]))
+
+        source = task["url"]
+        if len(source) > 110:
+            source = source[:107] + "..."
+        self.youtube_table.setItem(row, 3, QTableWidgetItem(source))
+        self.youtube_table.setItem(row, 4, QTableWidgetItem(task["status"]))
+        self.youtube_table.setItem(row, 5, QTableWidgetItem(f"{task['progress']:.1f}%"))
+
+    def _on_youtube_task_updated(self, task: dict) -> None:
+        row = self._find_youtube_row(int(task["task_id"]))
+        if row < 0:
+            return
+
+        status = task.get("status", "")
+        message = task.get("message", "")
+        progress = float(task.get("progress", 0.0))
+        self.youtube_table.item(row, 4).setText(f"{status} - {message}")
+        self.youtube_table.item(row, 5).setText(f"{progress:.1f}%")
+        self.status.showMessage(f"YouTube: tache #{task['task_id']} {status}")
+
+    def _on_youtube_task_removed(self, task_id: int) -> None:
+        row = self._find_youtube_row(task_id)
+        if row >= 0:
+            self.youtube_table.removeRow(row)
+
+    def _on_youtube_task_log(self, task_id: int, line: str) -> None:
+        self.youtube_logs.append(f"#{task_id} {line}")
 
     def apply_theme(self, mode: str) -> None:
         self.setStyleSheet(stylesheet_for(mode))
