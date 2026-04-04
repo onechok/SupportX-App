@@ -12,7 +12,7 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\SupportX App
 DefaultGroupName=SupportX App
-OutputDir=dist
+OutputDir=..\..\dist
 OutputBaseFilename=SupportX-Setup-v{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
@@ -20,7 +20,7 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile=image\logo\logo-notification.ico
+SetupIconFile=..\..\image\logo\logo-notification.ico
 UninstallDisplayIcon={app}\image\logo\logo-notification.ico
 
 [Languages]
@@ -31,17 +31,17 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Creer un raccourci sur le Bureau"; GroupDescription: "Raccourcis:"; Flags: unchecked
 
 [Files]
-Source: "launcher.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "config.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "install-supportx.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "install-supportx.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "start-supportx.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "start-supportx.sh"; DestDir: "{app}"; Flags: ignoreversion
-Source: "start-supportx.command"; DestDir: "{app}"; Flags: ignoreversion
-Source: "supportx_app\*"; DestDir: "{app}\supportx_app"; Flags: recursesubdirs createallsubdirs ignoreversion
-Source: "image\*"; DestDir: "{app}\image"; Flags: recursesubdirs createallsubdirs ignoreversion
-Source: "tabs\*"; DestDir: "{app}\tabs"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "..\..\launcher.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\config.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\install-supportx.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\install-supportx.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\start-supportx.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\start-supportx.sh"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\start-supportx.command"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\supportx_app\*"; DestDir: "{app}\supportx_app"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "..\..\image\*"; DestDir: "{app}\image"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "..\..\tabs\*"; DestDir: "{app}\tabs"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
 Name: "{group}\SupportX App"; Filename: "{app}\{#MyAppExe}"; WorkingDir: "{app}"; IconFilename: "{app}\image\logo\logo-notification.ico"
