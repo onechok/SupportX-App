@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-
+    
 import os
 import platform
 import shutil
@@ -62,6 +62,35 @@ class UpdateCheckBridge(QObject):
 
 
 class MainWindow(QMainWindow):
+    def _build_diagnostic_page(self) -> QWidget:
+        from PySide6.QtWidgets import QVBoxLayout, QPushButton, QTextEdit, QWidget
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
+        self.diagnostic_output = QTextEdit()
+        self.diagnostic_output.setReadOnly(True)
+        run_btn = QPushButton("Lancer le diagnostic complet")
+        run_btn.clicked.connect(self._run_diagnostic_cli)
+        layout.addWidget(run_btn)
+        layout.addWidget(self.diagnostic_output, 1)
+        return page
+
+    def _run_diagnostic_cli(self):
+        import subprocess
+        import sys
+        self.diagnostic_output.clear()
+        try:
+            proc = subprocess.Popen([
+                sys.executable, "-m", "diagnostic_tool.batch", "--batch"
+            ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=str(self.app_dir))
+            for line in iter(proc.stdout.readline, b""):
+                if not line:
+                    break
+                self.diagnostic_output.append(line.decode(errors="replace"))
+        except Exception as exc:
+            self.diagnostic_output.append(f"Erreur lors du lancement du diagnostic : {exc}")
+
     def __init__(self, app_dir: Path) -> None:
         super().__init__()
         self.app_dir = app_dir
@@ -124,7 +153,6 @@ class MainWindow(QMainWindow):
     def _build_ui(self) -> None:
         self.status = QStatusBar()
         self.setStatusBar(self.status)
-
         root = QWidget()
         root_layout = QVBoxLayout(root)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -145,6 +173,7 @@ class MainWindow(QMainWindow):
         self.anydesk_page = self._build_anydesk_page()
         self.youtube_page = self._build_youtube_page()
         self.game_page = GameManager()
+        self.diagnostic_page = self._build_diagnostic_page()
         self.settings_page = self._build_settings_page()
         self.about_page = self._build_about_page()
 
@@ -152,6 +181,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.anydesk_page)
         self.stack.addWidget(self.youtube_page)
         self.stack.addWidget(self.game_page)
+        self.stack.addWidget(self.diagnostic_page)
         self.stack.addWidget(self.settings_page)
         self.stack.addWidget(self.about_page)
         content_layout.addWidget(self.stack, 1)
@@ -187,6 +217,7 @@ class MainWindow(QMainWindow):
             "AnyDesk",
             "YouTube",
             "Jeux",
+            "Diagnostic",
             "Parametres",
             "A propos"
         ]
