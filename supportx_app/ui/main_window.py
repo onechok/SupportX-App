@@ -1,4 +1,6 @@
+
 from __future__ import annotations
+from tabs.snake_tab import build_snake_tab
 
 import os
 import platform
@@ -10,6 +12,7 @@ import webbrowser
 from pathlib import Path
 
 import requests
+
 from PySide6.QtCore import QObject, QEvent, QTimer, Signal, Qt
 from PySide6.QtWidgets import (
     QApplication,
@@ -34,6 +37,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from supportx_app.ui.anydesk_3d import Anydesk3DWidget
 
 if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[2]))
@@ -136,15 +140,18 @@ class MainWindow(QMainWindow):
 
         self.stack = QStackedWidget()
         self.stack.setObjectName("contentStack")
+
         self.web_page = self._build_web_page()
         self.anydesk_page = self._build_anydesk_page()
         self.youtube_page = self._build_youtube_page()
+        self.snake_page = build_snake_tab()
         self.settings_page = self._build_settings_page()
         self.about_page = self._build_about_page()
 
         self.stack.addWidget(self.web_page)
         self.stack.addWidget(self.anydesk_page)
         self.stack.addWidget(self.youtube_page)
+        self.stack.addWidget(self.snake_page)
         self.stack.addWidget(self.settings_page)
         self.stack.addWidget(self.about_page)
         content_layout.addWidget(self.stack, 1)
@@ -175,7 +182,15 @@ class MainWindow(QMainWindow):
         self.nav_group = QButtonGroup(self)
         self.nav_group.setExclusive(True)
 
-        for index, label in enumerate(["SupportX Web", "AnyDesk", "YouTube", "Parametres", "A propos"]):
+        sidebar_labels = [
+            "SupportX Web",
+            "AnyDesk",
+            "YouTube",
+            "Snake",
+            "Parametres",
+            "A propos"
+        ]
+        for index, label in enumerate(sidebar_labels):
             btn = QPushButton(label)
             btn.setCheckable(True)
             btn.setObjectName("navButton")
@@ -212,25 +227,27 @@ class MainWindow(QMainWindow):
         layout.setHorizontalSpacing(12)
         layout.setVerticalSpacing(12)
 
+        # Bloc info
         info_card = self._card("Installation AnyDesk")
         info = info_card.layout()
         info_text = QLabel(
-            "Telechargez puis installez AnyDesk directement depuis cette page. "
-            "Le mode d'installation est adapte automatiquement a votre systeme."
+            "Téléchargez puis installez AnyDesk directement depuis cette page. "
+            "Le mode d'installation est adapté automatiquement à votre système."
         )
         info_text.setWordWrap(True)
         info_text.setObjectName("cardHeadline")
         info.addWidget(info_text)
 
-        self.anydesk_status = QLabel("Statut: pret")
+        self.anydesk_status = QLabel("Statut: prêt")
         self.anydesk_status.setWordWrap(True)
         self.anydesk_status.setObjectName("mutedLabel")
         info.addWidget(self.anydesk_status)
 
+        # Bloc actions
         actions_card = self._card("Actions")
         actions = actions_card.layout()
 
-        btn_download = QPushButton("Telecharger AnyDesk")
+        btn_download = QPushButton("Télécharger AnyDesk")
         btn_download.clicked.connect(self.download_anydesk)
 
         self.btn_install_anydesk = QPushButton("Installer AnyDesk")
@@ -243,10 +260,12 @@ class MainWindow(QMainWindow):
         actions.addWidget(self.btn_install_anydesk)
         actions.addWidget(btn_open_site)
 
+
         layout.addWidget(info_card, 0, 0)
         layout.addWidget(actions_card, 0, 1)
         layout.setColumnStretch(0, 3)
         layout.setColumnStretch(1, 2)
+        layout.setColumnStretch(2, 3)
         return page
 
     def _build_settings_page(self) -> QWidget:
@@ -436,16 +455,65 @@ class MainWindow(QMainWindow):
         return page
 
     def _build_about_page(self) -> QWidget:
+        from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QFrame, QTextEdit
         page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(10)
+        outer_layout = QVBoxLayout(page)
+        outer_layout.setContentsMargins(18, 18, 18, 18)
+        outer_layout.setSpacing(18)
+
+        # Ligne du haut : deux colonnes
+        main_layout = QHBoxLayout()
+        main_layout.setSpacing(24)
+
+        # Colonne gauche : cube 3D
+        cube_frame = QFrame()
+        cube_layout = QVBoxLayout(cube_frame)
+        cube_layout.setContentsMargins(0, 0, 0, 0)
+        cube_layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        cube3d = Anydesk3DWidget()
+        cube3d.setFixedSize(320, 240)
+        cube_layout.addWidget(cube3d)
+        main_layout.addWidget(cube_frame, 0)
+
+        # Colonne droite : texte
+        text_frame = QFrame()
+        text_layout = QVBoxLayout(text_frame)
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(8)
+        text_layout.setAlignment(Qt.AlignTop)
 
         title = QLabel("SupportX App")
         title.setObjectName("heroTitle")
         subtitle = QLabel(f"Version {self.config.app_version}")
         subtitle.setObjectName("cardHeadline")
+        author = QLabel("Développeur : onechok")
+        author.setObjectName("cardHeadline")
 
+        text_layout.addWidget(title)
+        text_layout.addWidget(subtitle)
+        text_layout.addWidget(author)
+
+        # Informations complémentaires
+        license_label = QLabel("Licence : MIT (voir dépôt GitHub)")
+        license_label.setObjectName("cardHeadline")
+        github_label = QLabel('<a href="https://github.com/onechok/SupportX-App">Dépôt GitHub</a>')
+        github_label.setOpenExternalLinks(True)
+        github_label.setObjectName("cardHeadline")
+        website_label = QLabel('<a href="https://supportx.ch/">Site officiel</a>')
+        website_label.setOpenExternalLinks(True)
+        website_label.setObjectName("cardHeadline")
+        deps_label = QLabel("Dépendances : PySide6, vispy, yt-dlp, requests")
+        deps_label.setObjectName("cardHeadline")
+
+        text_layout.addWidget(license_label)
+        text_layout.addWidget(github_label)
+        text_layout.addWidget(website_label)
+        text_layout.addWidget(deps_label)
+        main_layout.addWidget(text_frame, 1)
+
+        outer_layout.addLayout(main_layout)
+
+        # Ligne du bas : détails sur toute la largeur
         details = QTextEdit()
         details.setReadOnly(True)
         details.setPlainText(
@@ -464,10 +532,7 @@ class MainWindow(QMainWindow):
             "- v0.0.8: mise a jour uniquement sur confirmation utilisateur, verification non bloquante.\n"
             "- v0.0.9: correction des chemins Inno Setup pour une build .exe release fiable.\n"
         )
-
-        layout.addWidget(title)
-        layout.addWidget(subtitle)
-        layout.addWidget(details)
+        outer_layout.addWidget(details)
         return page
 
     def _card(self, title: str) -> QFrame:

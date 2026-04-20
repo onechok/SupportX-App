@@ -1,3 +1,4 @@
 requests
 PySide6
+vispy
 yt-dlp
