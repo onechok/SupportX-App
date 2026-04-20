@@ -1,6 +1,5 @@
 
 from __future__ import annotations
-from tabs.snake_tab import build_snake_tab
 
 import os
 import platform
@@ -141,17 +140,18 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.stack.setObjectName("contentStack")
 
+        from game.manager import GameManager
         self.web_page = self._build_web_page()
         self.anydesk_page = self._build_anydesk_page()
         self.youtube_page = self._build_youtube_page()
-        self.snake_page = build_snake_tab()
+        self.game_page = GameManager()
         self.settings_page = self._build_settings_page()
         self.about_page = self._build_about_page()
 
         self.stack.addWidget(self.web_page)
         self.stack.addWidget(self.anydesk_page)
         self.stack.addWidget(self.youtube_page)
-        self.stack.addWidget(self.snake_page)
+        self.stack.addWidget(self.game_page)
         self.stack.addWidget(self.settings_page)
         self.stack.addWidget(self.about_page)
         content_layout.addWidget(self.stack, 1)
@@ -186,7 +186,7 @@ class MainWindow(QMainWindow):
             "SupportX Web",
             "AnyDesk",
             "YouTube",
-            "Snake",
+            "Jeux",
             "Parametres",
             "A propos"
         ]
