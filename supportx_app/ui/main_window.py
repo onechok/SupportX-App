@@ -514,6 +514,69 @@ class MainWindow(QMainWindow):
         text_layout.setSpacing(8)
         text_layout.setAlignment(Qt.AlignTop)
 
+        # Section fonctionnalités conditionnelles
+        features = []
+        try:
+            import diagnostic_tool
+            features.append("Diagnostic système & réseau")
+        except ImportError:
+            pass
+        try:
+            import game
+            features.append("Jeux intégrés (Snake, Clicker, Cube3D, etc.)")
+        except ImportError:
+            pass
+        try:
+            import supportx_app.youtube
+            features.append("Téléchargement YouTube avancé")
+        except ImportError:
+            pass
+        try:
+            import supportx_app.web
+            features.append("Navigateur web intégré/overlay")
+        except ImportError:
+            pass
+        try:
+            import supportx_app.updates
+            features.append("Mise à jour automatique")
+        except ImportError:
+            pass
+        try:
+            import vispy
+            features.append("Affichage 3D (Vispy)")
+        except ImportError:
+            pass
+        if features:
+            features_label = QLabel("Fonctionnalités conditionnelles :\n- " + "\n- ".join(features))
+            features_label.setObjectName("cardHeadline")
+            text_layout.addWidget(features_label)
+        from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QFrame, QTextEdit
+        page = QWidget()
+        outer_layout = QVBoxLayout(page)
+        outer_layout.setContentsMargins(18, 18, 18, 18)
+        outer_layout.setSpacing(18)
+
+        # Ligne du haut : deux colonnes
+        main_layout = QHBoxLayout()
+        main_layout.setSpacing(24)
+
+        # Colonne gauche : cube 3D
+        cube_frame = QFrame()
+        cube_layout = QVBoxLayout(cube_frame)
+        cube_layout.setContentsMargins(0, 0, 0, 0)
+        cube_layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        cube3d = Anydesk3DWidget()
+        cube3d.setFixedSize(320, 240)
+        cube_layout.addWidget(cube3d)
+        main_layout.addWidget(cube_frame, 0)
+
+        # Colonne droite : texte
+        text_frame = QFrame()
+        text_layout = QVBoxLayout(text_frame)
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(8)
+        text_layout.setAlignment(Qt.AlignTop)
+
         title = QLabel("SupportX App")
         title.setObjectName("heroTitle")
         subtitle = QLabel(f"Version {self.config.app_version}")
