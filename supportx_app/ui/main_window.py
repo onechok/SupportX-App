@@ -426,8 +426,8 @@ class MainWindow(QMainWindow):
         queue = self._card("Gestionnaire de telechargements")
         queue_layout = queue.layout()
 
-        self.youtube_table = QTableWidget(0, 6)
-        self.youtube_table.setHorizontalHeaderLabels(["ID", "Format", "Qualite", "Source", "Statut", "Progression"])
+        self.youtube_table = QTableWidget(0, 7)
+        self.youtube_table.setHorizontalHeaderLabels(["ID", "Format", "Qualite", "Source", "Statut", "Progression", "Lecture"])
         self.youtube_table.verticalHeader().setVisible(False)
         self.youtube_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.youtube_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -439,6 +439,7 @@ class MainWindow(QMainWindow):
         self.youtube_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self.youtube_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         self.youtube_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        self.youtube_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
         queue_layout.addWidget(self.youtube_table)
 
         self.youtube_logs = QTextEdit()
@@ -691,6 +692,13 @@ class MainWindow(QMainWindow):
         self.youtube_table.setItem(row, 4, QTableWidgetItem(task["status"]))
         self.youtube_table.setItem(row, 5, QTableWidgetItem(f"{task['progress']:.1f}%"))
 
+        # Ajout du bouton Lecture
+        from PySide6.QtWidgets import QPushButton
+        play_btn = QPushButton("Lecture")
+        play_btn.setEnabled(task["status"] == "done")
+        play_btn.clicked.connect(lambda _=None, t=task: self._play_youtube_file(t))
+        self.youtube_table.setCellWidget(row, 6, play_btn)
+
     def _on_youtube_task_updated(self, task: dict) -> None:
         row = self._find_youtube_row(int(task["task_id"]))
         if row < 0:
@@ -702,6 +710,39 @@ class MainWindow(QMainWindow):
         self.youtube_table.item(row, 4).setText(f"{status} - {message}")
         self.youtube_table.item(row, 5).setText(f"{progress:.1f}%")
         self.status.showMessage(f"YouTube: tache #{task['task_id']} {status}")
+
+        # Activer/désactiver le bouton Lecture selon le statut
+        play_btn = self.youtube_table.cellWidget(row, 6)
+        if play_btn:
+            play_btn.setEnabled(status == "done")
+
+    def _play_youtube_file(self, task: dict) -> None:
+        """Ouvre le fichier téléchargé avec le lecteur par défaut."""
+        # Recherche du dossier de sortie et du nom de fichier attendu
+        output_dir = task.get("output_dir")
+        url = task.get("url")
+        media_type = task.get("media_type")
+        # Recherche du fichier téléchargé dans le dossier de sortie
+        # On prend le fichier le plus récent correspondant au type demandé
+        import glob
+        import os
+        from pathlib import Path
+        exts = {"mp3": "*.mp3", "mp4": "*.mp4"}
+        pattern = os.path.join(output_dir, exts.get(media_type, "*"))
+        files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
+        if not files:
+            QMessageBox.warning(self, "Lecture", "Aucun fichier trouvé dans le dossier de sortie.")
+            return
+        target_path = Path(files[0])
+        try:
+            if platform.system() == "Windows":
+                os.startfile(str(target_path))  # type: ignore[attr-defined]
+            elif platform.system() == "Darwin":
+                subprocess.Popen(["open", str(target_path)])
+            else:
+                subprocess.Popen(["xdg-open", str(target_path)])
+        except Exception as exc:
+            QMessageBox.warning(self, "Lecture", f"Impossible d'ouvrir le fichier.\n\n{exc}")
 
     def _on_youtube_task_removed(self, task_id: int) -> None:
         row = self._find_youtube_row(task_id)
