@@ -6,3 +6,5 @@ yt-dlp
 PyCraft
 pygame
 pytmx
+TikTokLive
+ttkbootstrap
