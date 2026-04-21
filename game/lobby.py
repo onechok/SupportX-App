@@ -34,6 +34,11 @@ class LobbyWidget(QWidget):
         self.game_select.addItem("Clicker")
         self.game_select.addItem("Cube 3D")
         self.game_select.addItem("PyCraft")
+        self.game_select.addItem("Pong")
+        self.game_select.addItem("Platform")
+        self.game_select.addItem("Monster battle")
+        self.game_select.addItem("Vampire survivor")
+        self.game_select.addItem("Space shooter")
         lobby_layout.addWidget(self.game_select)
 
         btn_row = QHBoxLayout()
@@ -76,9 +81,10 @@ class LobbyWidget(QWidget):
         pass
 
     def _start_game(self):
-        import subprocess, sys
+        import subprocess, sys, os
         pseudo = self.pseudo_input.text().strip() or "Joueur"
-        if self.game_select.currentText() == "PyCraft":
+        game = self.game_select.currentText()
+        if game == "PyCraft":
             # Lancer PyCraft dans un nouveau processus (nom du module en minuscule)
             try:
                 subprocess.Popen([sys.executable, '-m', 'pycraft'])
@@ -86,20 +92,35 @@ class LobbyWidget(QWidget):
                 from PySide6.QtWidgets import QMessageBox
                 QMessageBox.critical(self, "Erreur PyCraft", f"Impossible de lancer PyCraft : {e}")
             return
+        # Jeux externes (5games)
+        external_games = {
+            "Pong": os.path.join("game", "Pong", "code", "main.py"),
+            "Platform": os.path.join("game", "Platform", "code", "main.py"),
+            "Monster battle": os.path.join("game", "Monster battle", "code", "main.py"),
+            "Vampire survivor": os.path.join("game", "Vampire survivor", "code", "main.py"),
+            "Space shooter": os.path.join("game", "space shooter", "main.py"),
+        }
+        if game in external_games:
+            try:
+                subprocess.Popen([sys.executable, external_games[game]])
+            except Exception as e:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.critical(self, f"Erreur {game}", f"Impossible de lancer {game} : {e}")
+            return
         self.lobby_widget.hide()
         self.back_btn.show()
         # Masquer tous les jeux
         self.snake_widget.hide()
         self.clicker_widget.hide()
         self.cube3d_widget.hide()
-        if self.game_select.currentText() == "Snake":
+        if game == "Snake":
             self.snake_widget.set_player(pseudo)
             self.snake_widget.reset_game()
             self.snake_widget.show()
-        elif self.game_select.currentText() == "Clicker":
+        elif game == "Clicker":
             self.clicker_widget.reset()
             self.clicker_widget.show()
-        elif self.game_select.currentText() == "Cube 3D":
+        elif game == "Cube 3D":
             self.cube3d_widget.show()
     def _show_lobby(self):
         self.lobby_widget.show()

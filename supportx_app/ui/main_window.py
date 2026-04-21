@@ -36,6 +36,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+# Ajout de la page TikTokApiPage
+from supportx_app.ui.tiktok_api_page import TikTokApiPage
+from supportx_app.ui.tiktok_dashboard import TikTokDashboard
 from supportx_app.ui.anydesk_3d import Anydesk3DWidget
 
 if __package__ in (None, ""):
@@ -176,6 +180,8 @@ class MainWindow(QMainWindow):
         self.diagnostic_page = self._build_diagnostic_page()
         self.settings_page = self._build_settings_page()
         self.about_page = self._build_about_page()
+        self.tiktok_api_page = TikTokApiPage()
+        self.tiktok_dashboard = TikTokDashboard()
 
         self.stack.addWidget(self.web_page)
         self.stack.addWidget(self.anydesk_page)
@@ -184,7 +190,10 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.diagnostic_page)
         self.stack.addWidget(self.settings_page)
         self.stack.addWidget(self.about_page)
+        self.stack.addWidget(self.tiktok_api_page)
+        self.stack.addWidget(self.tiktok_dashboard)
         content_layout.addWidget(self.stack, 1)
+
 
         root_layout.addWidget(content, 1)
         self.setCentralWidget(root)
@@ -212,6 +221,8 @@ class MainWindow(QMainWindow):
         self.nav_group = QButtonGroup(self)
         self.nav_group.setExclusive(True)
 
+
+
         sidebar_labels = [
             "SupportX Web",
             "AnyDesk",
@@ -219,7 +230,9 @@ class MainWindow(QMainWindow):
             "Jeux",
             "Diagnostic",
             "Parametres",
-            "A propos"
+            "A propos",
+            "TikTok API",
+            "TikTok Dashboard"
         ]
         for index, label in enumerate(sidebar_labels):
             btn = QPushButton(label)
