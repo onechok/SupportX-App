@@ -57,7 +57,11 @@ jobs:
           cd $env:GITHUB_WORKSPACE
           $version = "${env:VERSION}".TrimStart('v')
           "VERSION_CLEAN=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $configPath = "config/config.json"
+          if (Test-Path "SupportX-App/config/config.json") {
+            $configPath = "SupportX-App/config/config.json"
+          } else {
+            $configPath = "config/config.json"
+          }
           $json = Get-Content $configPath -Raw | ConvertFrom-Json
           $json.app_version = $version
           $json.auto_update = $true
