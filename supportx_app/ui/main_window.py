@@ -182,6 +182,8 @@ class MainWindow(QMainWindow):
         self.about_page = self._build_about_page()
         self.tiktok_api_page = TikTokApiPage()
         self.tiktok_dashboard = TikTokDashboard()
+        from supportx_app.ui.tiktok_connector_tab import TikTokConnectorTab
+        self.tiktok_connector_tab = TikTokConnectorTab()
 
         self.stack.addWidget(self.web_page)
         self.stack.addWidget(self.anydesk_page)
@@ -192,6 +194,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.about_page)
         self.stack.addWidget(self.tiktok_api_page)
         self.stack.addWidget(self.tiktok_dashboard)
+        self.stack.addWidget(self.tiktok_connector_tab)
         content_layout.addWidget(self.stack, 1)
 
 
@@ -232,7 +235,8 @@ class MainWindow(QMainWindow):
             "Parametres",
             "A propos",
             "TikTok API",
-            "TikTok Dashboard"
+            "TikTok Dashboard",
+            "TikTok Connector"
         ]
         for index, label in enumerate(sidebar_labels):
             btn = QPushButton(label)

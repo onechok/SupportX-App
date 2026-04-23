@@ -1,3 +1,22 @@
+# Node.js
+node_modules/
+
+# Archives et paquets
+*.zip
+*.tar.gz
+*.tar
+*.rar
+*.7z
+
+# Fichiers sons personnalisés
+sound/*.wav
+sound/*.mp3
+# Sauf si tu veux versionner certains sons, retire-les de cette liste
+
+# Fichiers de données TikTok (hors historiques)
+*.json
+!tiktok_events.json
+!tiktok_users.json
 # Fichier .gitignore pour projet Python
 
 # Environnements virtuels
