@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
         self.app_dir = app_dir
         self._tray_enabled = False
         self._force_close = False
-        self.config_path = app_dir / "config.json"
+        self.config_path = app_dir / "config" / "config.json"
         self.config = AppConfig.load(self.config_path)
         self._pending_update: UpdateInfo | None = None
         self._update_check_in_progress = False

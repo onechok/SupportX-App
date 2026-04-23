@@ -93,7 +93,7 @@ def main() -> int:
         staging.mkdir(parents=True, exist_ok=True)
 
         copy_project(src_root, staging)
-        patch_config_version(staging / "config.json", version)
+        patch_config_version(staging / "config/config.json", version)
 
         zip_path = output_dir / f"supportx-app-v{version}.zip"
         tar_path = output_dir / f"supportx-app-v{version}.tar.gz"

@@ -4,10 +4,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-if command -v python3 >/dev/null 2>&1; then
-  PYTHON_BIN="python3"
+
+if command -v python3.13 >/dev/null 2>&1; then
+  PYTHON_BIN="python3.13"
 else
-  echo "python3 est requis pour installer SupportX."
+  echo "python3.13 est requis pour installer SupportX. Installez-le puis relancez ce script."
   exit 1
 fi
 
@@ -16,7 +17,7 @@ if [[ ! -d "$SCRIPT_DIR/.venv" ]]; then
 fi
 
 "$SCRIPT_DIR/.venv/bin/python" -m pip install --upgrade pip
-"$SCRIPT_DIR/.venv/bin/python" -m pip install -r "$SCRIPT_DIR/requirements.txt"
+"$SCRIPT_DIR/.venv/bin/python" -m pip install -r "$SCRIPT_DIR/../config/requirements.txt"
 
 mkdir -p "$HOME/.local/share/applications"
 

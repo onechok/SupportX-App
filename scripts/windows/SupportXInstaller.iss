@@ -32,8 +32,8 @@ Name: "desktopicon"; Description: "Creer un raccourci sur le Bureau"; GroupDescr
 
 [Files]
 Source: "..\..\launcher.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\config.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\config\config.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\config\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\install-supportx.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\install-supportx.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\start-supportx.bat"; DestDir: "{app}"; Flags: ignoreversion

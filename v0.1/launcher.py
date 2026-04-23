@@ -11,8 +11,8 @@ from PIL import Image, ImageTk
 import webbrowser
 import time
 import darkdetect  # Added missing import
-from theme_manager import ThemeManager  # Import the new ThemeManager
-from update_manager import UpdateManager  # Import du gestionnaire de mises à jour
+from utils.theme_manager import ThemeManager  # Import the new ThemeManager
+from utils.update_manager import UpdateManager  # Import du gestionnaire de mises à jour
 
 class SuperAppLauncher:
     def __init__(self, root):

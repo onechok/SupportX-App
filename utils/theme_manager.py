@@ -3,7 +3,7 @@ import os
 
 class ThemeManager:
     def __init__(self):
-        self.config_file = "config.json"
+        self.config_file = os.path.join(os.path.dirname(__file__), '../config/config.json')
         self.config = self.load_config()
 
     def load_config(self):
