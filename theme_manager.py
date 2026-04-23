@@ -15,9 +15,9 @@ class ThemeManager:
                 "theme": "system",
                 "auto_update": True,
                 "simulate_updates": False,
-                "app_name": "SuperApp Launcher",
-                "app_version": "1.0.0",
-                "supportx_url": "https://supportx.com"
+                "app_name": "Supportx APP Launcher",
+                "app_version": "0.2.0",
+                "supportx_url": "https://supportx.ch"
             }
 
     def save_config(self):
